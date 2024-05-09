@@ -1,22 +1,34 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, FlatList, Image } from "react-native";
+import { View, Text, FlatList, Image, ActivityIndicator } from "react-native";
 import axios from "axios";
-
-export interface Leader {
-  profile_picture: string;
-  username: string;
-  rank: number;
-}
+import { Leader } from "../types/UserTypes";
 
 const LeaderboardScreen = () => {
   const [leaders, setLeaders] = useState<Leader[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     axios
       .get("https://api.bags.fm/api/v1/user/get_user_leaderboard")
-      .then((response) => setLeaders(response.data))
-      .catch((error) => console.error(error));
+      .then((response) => {
+        setLeaders(response.data);
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error(error);
+        setError("Failed to fetch data");
+        setLoading(false);
+      });
   }, []);
+
+  if (loading) {
+    return <ActivityIndicator size="large" color="#0000ff" />;
+  }
+
+  if (error) {
+    return <Text>Error: {error}</Text>;
+  }
 
   return (
     <View>

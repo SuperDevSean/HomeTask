@@ -1,35 +1,60 @@
 // screens/ProfileLookupScreen.tsx
 import React, { useState } from "react";
-import { View, TextInput, Button, Text, Image } from "react-native";
+import {
+  View,
+  TextInput,
+  Button,
+  Text,
+  Image,
+  ActivityIndicator,
+  StyleSheet,
+} from "react-native";
 import axios from "axios";
-
-import { Leader } from "./LeaderboardScreen";
+import debounce from "lodash.debounce";
+import { Leader } from "../types/UserTypes";
 
 const ProfileLookupScreen = () => {
   const [username, setUsername] = useState("");
-  const [profile, setProfile] = useState<Leader>();
+  const [profile, setProfile] = useState<Leader | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const fetchProfile = () => {
+  const fetchProfile = debounce(() => {
+    if (!username.trim()) {
+      setError("Please enter a valid username.");
+      return;
+    }
+    setLoading(true);
+    setError("");
     axios
       .get(`https://api.bags.fm/api/v1/user/${username}`)
-      .then((response) => setProfile(response.data))
-      .catch((error) => console.error(error));
-  };
+      .then((response) => {
+        setProfile(response.data);
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error(error);
+        setError("Failed to fetch user data.");
+        setLoading(false);
+      });
+  }, 300); // 300ms debounce period
 
   return (
-    <View>
+    <View style={styles.container}>
       <TextInput
         placeholder="Enter Username"
         value={username}
         onChangeText={setUsername}
-        style={{ margin: 10, borderWidth: 1, padding: 10 }}
+        style={styles.input}
       />
       <Button title="Search" onPress={fetchProfile} />
+      {loading && <ActivityIndicator size="large" />}
+      {error ? <Text style={styles.error}>{error}</Text> : null}
       {profile && (
-        <View style={{ alignItems: "center", marginTop: 20 }}>
+        <View style={styles.profileContainer}>
           <Image
             source={{ uri: profile.profile_picture }}
-            style={{ width: 100, height: 100, borderRadius: 50 }}
+            style={styles.profileImage}
           />
           <Text>
             {profile.username} (Rank: {profile.rank})
@@ -39,5 +64,29 @@ const ProfileLookupScreen = () => {
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    padding: 10,
+  },
+  input: {
+    borderWidth: 1,
+    marginBottom: 10,
+    paddingHorizontal: 10,
+    height: 40,
+  },
+  profileContainer: {
+    alignItems: "center",
+    marginTop: 20,
+  },
+  profileImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
+  error: {
+    color: "red",
+  },
+});
 
 export default ProfileLookupScreen;
